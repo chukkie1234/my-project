@@ -1,0 +1,43 @@
+name: Deploy Blogify to AWS
+
+on:
+push:
+branches:
+- main
+
+permissions:
+id-token: write
+contents: read
+
+env:
+AWS_REGION: us-east-1
+S3_BUCKET: devops-pratice101
+CLOUDFRONT_DISTRIBUTION_ID: E3S8F3QQD5FVNG
+
+jobs:
+deploy:
+runs-on: ubuntu-latest
+
+steps:
+- name: Checkout repository
+uses: actions/checkout@v5
+
+- name: Configure AWS credentials
+uses: aws-actions/configure-aws-credentials@v6
+with:
+role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+aws-region: ${{ env.AWS_REGION }}
+
+- name: Sync website to S3
+run: |
+aws s3 sync . s3://${S3_BUCKET} \
+--exclude ".git/*" \
+--exclude ".github/*" \
+--exclude "README.md" \
+--exclude "Dockerfile"
+
+- name: Invalidate CloudFront cache
+run: |
+aws cloudfront create-invalidation \
+--distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+--paths "/*"
